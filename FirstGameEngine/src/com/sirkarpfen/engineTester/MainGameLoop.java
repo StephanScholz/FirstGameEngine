@@ -5,12 +5,13 @@ import org.lwjgl.util.vector.Vector3f;
 
 import com.sirkarpfen.entities.Camera;
 import com.sirkarpfen.entities.Entity;
+import com.sirkarpfen.entities.Light;
 import com.sirkarpfen.models.RawModel;
 import com.sirkarpfen.models.TexturedModel;
 import com.sirkarpfen.renderEngine.DisplayManager;
 import com.sirkarpfen.renderEngine.Loader;
-import com.sirkarpfen.renderEngine.Renderer;
-import com.sirkarpfen.shaders.StaticShader;
+import com.sirkarpfen.renderEngine.MasterRenderer;
+import com.sirkarpfen.renderEngine.OBJLoader;
 import com.sirkarpfen.textures.ModelTexture;
 
 public class MainGameLoop {
@@ -18,112 +19,31 @@ public class MainGameLoop {
 	public static void main(String[] args) {
 		
 		DisplayManager.createDisplay();
-		
 		Loader loader = new Loader();
-		StaticShader shader = new StaticShader();
-		Renderer renderer = new Renderer(shader);
 		
-		//OpenGL expects vertices to be defined counter clockwise by default
-		float[] vertices = {			
-				-0.5f,0.5f,-0.5f,	
-				-0.5f,-0.5f,-0.5f,	
-				0.5f,-0.5f,-0.5f,	
-				0.5f,0.5f,-0.5f,		
-				
-				-0.5f,0.5f,0.5f,	
-				-0.5f,-0.5f,0.5f,	
-				0.5f,-0.5f,0.5f,	
-				0.5f,0.5f,0.5f,
-				
-				0.5f,0.5f,-0.5f,	
-				0.5f,-0.5f,-0.5f,	
-				0.5f,-0.5f,0.5f,	
-				0.5f,0.5f,0.5f,
-				
-				-0.5f,0.5f,-0.5f,	
-				-0.5f,-0.5f,-0.5f,	
-				-0.5f,-0.5f,0.5f,	
-				-0.5f,0.5f,0.5f,
-				
-				-0.5f,0.5f,0.5f,
-				-0.5f,0.5f,-0.5f,
-				0.5f,0.5f,-0.5f,
-				0.5f,0.5f,0.5f,
-				
-				-0.5f,-0.5f,0.5f,
-				-0.5f,-0.5f,-0.5f,
-				0.5f,-0.5f,-0.5f,
-				0.5f,-0.5f,0.5f
-				
-		};
+		RawModel model = OBJLoader.loadObjModel("dragon", loader);
 		
-		float[] textureCoords = {
-				
-				0,0,
-				0,1,
-				1,1,
-				1,0,			
-				0,0,
-				0,1,
-				1,1,
-				1,0,			
-				0,0,
-				0,1,
-				1,1,
-				1,0,
-				0,0,
-				0,1,
-				1,1,
-				1,0,
-				0,0,
-				0,1,
-				1,1,
-				1,0,
-				0,0,
-				0,1,
-				1,1,
-				1,0
-
-				
-		};
+		TexturedModel staticModel = new TexturedModel(model, new ModelTexture(loader.loadTexture("dragonTexture")));
+		ModelTexture texture = staticModel.getTexture();
+		texture.setShineDamper(10);
+		texture.setReflectivity(1);
 		
-		int[] indices = {
-				0,1,3,	
-				3,1,2,	
-				4,5,7,
-				7,5,6,
-				8,9,11,
-				11,9,10,
-				12,13,15,
-				15,13,14,	
-				16,17,19,
-				19,17,18,
-				20,21,23,
-				23,21,22
-
-		};
-		
-		RawModel model = loader.loadToVAO(vertices, textureCoords, indices);
-		ModelTexture texture = new ModelTexture(loader.loadTexture("sample"));
-		TexturedModel texturedModel = new TexturedModel(model, texture);
-		
-		Entity entity = new Entity(texturedModel, new Vector3f(0,0,-5),0,0,0,1);
+		Entity entity = new Entity(staticModel, new Vector3f(0,-2.5f,-25),0,0,0,1);
+		Light light = new Light(new Vector3f(0,0,-20), new Vector3f(1,1,1));
 		
 		Camera camera = new Camera();
 		
+		MasterRenderer renderer = new MasterRenderer();
 		while(!Display.isCloseRequested()) {
-			entity.increaseRotation(1, 1, 0);
+			//entity.increaseRotation(0, 1, 0);
 			camera.move();
-			renderer.prepare();
-			shader.start();
-			shader.loadViewMatrix(camera);
-			renderer.render(entity, shader);
-			shader.stop();
+			renderer.processEntity(entity);
+			renderer.render(light, camera);
 			DisplayManager.updateDisplay();
 			
 		}
 		
-		shader.cleanUp();
+		renderer.cleanUp();
 		loader.cleanUp();
 		DisplayManager.closeDisplay();
 		
